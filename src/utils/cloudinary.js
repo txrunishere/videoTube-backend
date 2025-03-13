@@ -1,4 +1,6 @@
-import { v2 as cloudinary, v2 } from "cloudinary";
+import dotenv from "dotenv";
+dotenv.config();
+import { v2 as cloudinary } from "cloudinary";
 import fs from "fs"
 import logger from "./logging.js"
 
@@ -10,10 +12,16 @@ cloudinary.config(
   }
 )
 
-const uploadOnCloudinary = async function(localStorage) {
+async function uploadOnCloudinary(localStorage) {
   try {
-    const responseFileOnCloudinary = await cloudinary.uploader.upload(localStorage, { resource_type: "auto" });
-    logger.info("File Uploaded successfully on cloudinary" + responseFileOnCloudinary.url);
+    const responseFileOnCloudinary = await cloudinary.uploader.upload(
+      localStorage,
+      {
+        resource_type: "auto"
+      }
+    );
+
+    logger.info("File Uploaded successfully on cloudinary " + responseFileOnCloudinary.url);
     fs.unlinkSync(localStorage)
     return responseFileOnCloudinary;
   } catch (error) {
