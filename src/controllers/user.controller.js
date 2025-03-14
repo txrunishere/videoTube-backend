@@ -7,6 +7,20 @@ import logger from "../utils/logging.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 
 
+/*
+  Pending Routes
+  -> refreshAccessToken []
+  -> changeCurrentPassword []
+  -> getCurrentUser [ DONE ]
+  -> updateUserDetails [ DONE ]
+  -> updateUserAvatar []
+  -> updateUserCoverImage []
+*/
+
+/*
+  Routes With use of aggregation pipelines
+*/
+
 // Generate Both access and refresh token
 async function generateAccessAndRefreshToken (userId) {
   try {
@@ -218,8 +232,91 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 });
 
+
+// Get Information of current user
+const getCurrentUser = asyncHandler(
+  async (req, res) => {
+    return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        req.user,
+        `Information of ${req.user.username}`
+      )
+    )
+  }
+)
+
+
+// Update Username
+/**
+ * -> first check one of the field is available betweeen email, username, fullName
+ * -> check for email is in proper way 
+ * -> check that the fields want to update and replace data is not same
+ * -> create empty object for store which fiels comes for update
+ * -> save on the specific fiels
+ * -> return updated user
+*/
+const updateUserDetails = asyncHandler(
+  async (req, res) => {
+    const { fullName, username, email } = req.body;
+
+    if (!(email || username || fullName)) {
+      throw new ApiError(400, "One of the field is required!!");
+    }
+
+    if (email) {
+      if (!email.endsWith('@gmail.com')) {
+        throw new ApiError(400, "Enter a valid email address!!")
+      }
+    }
+
+    if ( email === req.user.email || fullName === req.user.fullName || username === req.user.username ) {
+      throw new ApiError(400, "Enter a different field");
+    }
+
+    let updateFields = {};
+    if (email) updateFields.email = email;
+    if (fullName) updateFields.fullName = fullName;
+    if (username) updateFields.username = username;
+
+    console.log(updateFields);
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: updateFields
+      },
+      {
+        new: true,
+      }
+    ).select(
+      "-password -refreshToken"
+    )
+
+    if(user) {
+      logger.info(`Field is updated successfully!!`)
+      return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          user,
+          "User's detail updated successfully!!"
+        )
+      )
+    } else {
+      throw new ApiError(400, "Error while update user's details")
+    }
+
+  }
+)
+
 export {
   registerUser,
   loginUser,
-  logoutUser
+  logoutUser,
+  getCurrentUser,
+  updateUserDetails
 }
