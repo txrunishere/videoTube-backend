@@ -10,7 +10,7 @@ import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js
 /*
   Pending Routes
   -> refreshAccessToken []
-  -> changeCurrentPassword []
+  -> changeCurrentPassword [  ]
   -> getCurrentUser [ DONE ]
   -> updateUserDetails [ DONE ]
   -> updateUserAvatar []
@@ -49,6 +49,10 @@ const registerUser = asyncHandler(
 
     if(!email?.endsWith('@gmail.com')) {
       throw new ApiError(400, "Enter a Valid Email Address!!");
+    }
+
+    if (password.length < 8) {
+      throw new ApiError(400, "Password must contains atleast 8 letters");
     }
 
     const isUserExists = await User.findOne(
@@ -140,6 +144,16 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { username, email, password } = req.body;
   checkFields(username, email, password);
+
+  if (password.length < 8) {
+    throw new ApiError(400, "Password must contains atleast 8 letters");
+  }
+
+  if (email) {
+    if (!email.endsWith('@gmail.com')) {
+      throw new ApiError(400, "Enter a valid email")
+    }
+  }
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
@@ -313,10 +327,51 @@ const updateUserDetails = asyncHandler(
   }
 )
 
+
+// Update User's password
+/**
+ * -> get new and old password from the user
+ * -> check password is correct or not
+ * -> replace new password from old password
+ * -> return response to user
+*/
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword && !newPassword) {
+    throw new ApiError(400, "Enter both new and old password!!");
+  }
+
+  if (newPassword.length < 8) {
+    throw new ApiError(400, "Password must contains atleast 8 letters");
+  }
+
+  const user = await User.findById(req.user._id);
+
+  const checkPassword = await user.isPasswordCorrect(oldPassword);
+  if (!checkPassword) throw new ApiError(200, "Invalid Password!!");
+
+  user.password = newPassword;
+  user.save({
+    validateBeforeSave: true,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        `User ${user.username} password updated successfully!!`
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
-  updateUserDetails
+  updateUserDetails,
+  changeCurrentPassword
 }
