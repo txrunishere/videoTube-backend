@@ -5,15 +5,17 @@ import { User } from "../models/user.models.js"
 import { checkFields } from "../utils/checkFields.js"
 import logger from "../utils/logging.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
+import jwt from "jsonwebtoken"
+import { v2 as cloudinary } from "cloudinary"
 
 
 /*
   Pending Routes
-  -> refreshAccessToken []
-  -> changeCurrentPassword [  ]
+  -> refreshAccessToken [ DONE ]
+  -> changeCurrentPassword [ DONE ]
   -> getCurrentUser [ DONE ]
   -> updateUserDetails [ DONE ]
-  -> updateUserAvatar []
+  -> updateUserAvatar [ DONE ]
   -> updateUserCoverImage []
 */
 
@@ -367,11 +369,140 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     );
 });
 
+
+// Change Refresh Token
+/**
+ * -> get refresh token from req.cookies
+ * -> decode that refresh token
+ * -> find user with decoded token's id
+ * -> match user's refresh token (which we store in DB) with incomming refresh token from user
+ * -> generate both new access and refresh token
+ * -> return both tokens to user
+*/
+const refreshAccessToken = asyncHandler(
+  async (req, res) => {
+    const incomingRefreshToken = req.cookies?.refreshToken;
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, "Refresh Token not Found!!");
+    }
+
+    try {
+      const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+  
+      const user = await User.findById(decodedToken?._id).select("-password");
+      if (!user) {
+        throw new ApiError(400, "User not Found!!")
+      }
+  
+      if (incomingRefreshToken !== user?.refreshToken) {
+        throw new ApiError(401, "Refresh token is used or expired!!")
+      }
+  
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+      return res
+      .status(200)
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true
+      })
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken },
+          "New Access and refresh tokens are generated!!"
+        )
+      )
+    } catch (error) {
+      throw new ApiError(401, error?.message || "Invalid Token")
+    }
+  }
+);
+
+
+// Change User's avatar
+/**
+ * -> set single image to upload
+ * -> get filepath of avatar image
+ * -> check for file path
+ * -> TODO: delete old image from cloudinary - { DONE }
+ * -> upload new avatar on cloudinary
+ * -> set user's avatar with new avatar
+ * -> return user with new user response
+*/
+const updateUserAvatar = asyncHandler(
+  async (req, res) => {
+    const avatarFilePath = req.file?.path;
+    if (!avatarFilePath) {
+      throw new ApiError(400, "Avatar file not found!!")
+    }
+
+    // Delete old avatar from Cloudinary
+    const oldAvatar = req.user?.avatar;
+    if (oldAvatar) {
+      const publicId = oldAvatar.split("/").pop().split(".")[0];
+      try {
+        await deleteFromCloudinary(publicId);
+      } catch (error) {
+        logger.error("Old avatar file not deleted", error);
+        throw new ApiError(500, "Old avatar file not deleted");
+      }
+    }
+
+    let avatar;
+    try {
+      avatar = await uploadOnCloudinary(avatarFilePath)
+    } catch (error) {
+      logger.error("Avatar File not Uploaded", error);
+      throw new ApiError(500, "Avatar file not uploaded")
+    }
+    if (!avatar.url) {
+      throw new ApiError(500, "Image not generate url from server side");
+    }
+
+    try {
+      const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+          $set: {
+            avatar: avatar?.url
+          }
+        },
+        { new: true }
+      ).select("-password -refreshToken")
+  
+      if (user) {
+        return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { user },
+            `User ${user.username} avatar image successfully updated and uploaded on cloudinary!!`
+          )
+        )
+      } else {
+        throw new ApiError(400, "Error while update user's avatar image")
+      }
+    } catch (error) {
+      await deleteFromCloudinary(avatar.public_id);
+      throw new ApiError(500, "Something wrong while upload image to cloudinary");
+    }
+  }
+);
+
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
   updateUserDetails,
-  changeCurrentPassword
+  changeCurrentPassword,
+  refreshAccessToken,
+  updateUserAvatar
 }

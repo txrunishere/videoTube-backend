@@ -12,20 +12,20 @@ cloudinary.config(
   }
 )
 
-async function uploadOnCloudinary(localStorage) {
+async function uploadOnCloudinary(localFile) {
   try {
     const responseFileOnCloudinary = await cloudinary.uploader.upload(
-      localStorage,
+      localFile,
       {
         resource_type: "auto"
       }
     );
 
     logger.info("File Uploaded successfully on cloudinary " + responseFileOnCloudinary.url);
-    fs.unlinkSync(localStorage)
+    fs.unlinkSync(localFile)
     return responseFileOnCloudinary;
   } catch (error) {
-    fs.unlinkSync(localStorage);
+    fs.unlinkSync(localFile);
     logger.error("File Not Uploaded Successfully!!")
     return null;
   }
@@ -33,7 +33,7 @@ async function uploadOnCloudinary(localStorage) {
 
 async function deleteFromCloudinary(publicId) {
   try {
-    const result = await cloudinary.uploader.destroy(publicId)
+    await cloudinary.uploader.destroy(publicId)
     console.log("Image deleted from Cloudinary. Public ID: ", publicId);
   } catch (error) {
     console.log("Error while deleting from cloudinary", error);
