@@ -34,7 +34,7 @@ async function uploadOnCloudinary(localFile) {
 async function deleteFromCloudinary(publicId) {
   try {
     await cloudinary.uploader.destroy(publicId)
-    console.log("Image deleted from Cloudinary. Public ID: ", publicId);
+    logger.info("Image deleted from Cloudinary. Public ID: ", publicId);
   } catch (error) {
     console.log("Error while deleting from cloudinary", error);
     return null;

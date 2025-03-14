@@ -6,8 +6,6 @@ import { checkFields } from "../utils/checkFields.js"
 import logger from "../utils/logging.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
-import { v2 as cloudinary } from "cloudinary"
-
 
 /*
   Pending Routes
@@ -16,11 +14,7 @@ import { v2 as cloudinary } from "cloudinary"
   -> getCurrentUser [ DONE ]
   -> updateUserDetails [ DONE ]
   -> updateUserAvatar [ DONE ]
-  -> updateUserCoverImage []
-*/
-
-/*
-  Routes With use of aggregation pipelines
+  -> updateUserCoverImage [ DONE ]
 */
 
 // Generate Both access and refresh token
@@ -424,7 +418,7 @@ const refreshAccessToken = asyncHandler(
 );
 
 
-// Change User's avatar
+// Update User's avatar
 /**
  * -> set single image to upload
  * -> get filepath of avatar image
@@ -496,6 +490,68 @@ const updateUserAvatar = asyncHandler(
 );
 
 
+// Update coverImage
+const updateUserCoverImage = asyncHandler(
+  async (req, res) => {
+    const coverImageFilePath = req.file?.path;
+    if (!coverImageFilePath) {
+      throw new ApiError(400, "CoverImage file not found!!")
+    }
+
+    const oldCoverImage = req.user?.avatar;
+    if (oldCoverImage) {
+      const publicId = oldCoverImage.split("/").pop().split(".")[0];
+      try {
+        await deleteFromCloudinary(publicId);
+      } catch (error) {
+        logger.error("Old CoverImage file not deleted", error);
+        throw new ApiError(500, "Old CoverImage file not deleted");
+      }
+    }
+
+    let coverImage;
+    try {
+      coverImage = await uploadOnCloudinary(coverImageFilePath)
+    } catch (error) {
+      logger.error("coverImage File not Uploaded", error);
+      throw new ApiError(500, "coverImage file not uploaded")
+    }
+    if (!coverImage.url) {
+      throw new ApiError(500, "Image not generate url from server side");
+    }
+
+    try {
+      const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+          $set: {
+            coverImage: coverImage?.url
+          }
+        },
+        { new: true }
+      ).select("-password -refreshToken")
+  
+      if (user) {
+        return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { user },
+            `User ${user.username} coverImage image successfully updated and uploaded on cloudinary!!`
+          )
+        )
+      } else {
+        throw new ApiError(400, "Error while update user's coverImage image")
+      }
+    } catch (error) {
+      await deleteFromCloudinary(coverImage.public_id);
+      throw new ApiError(500, "Something wrong while upload image to cloudinary");
+    }
+  }
+);
+
+
 export {
   registerUser,
   loginUser,
@@ -504,5 +560,6 @@ export {
   updateUserDetails,
   changeCurrentPassword,
   refreshAccessToken,
-  updateUserAvatar
+  updateUserAvatar,
+  updateUserCoverImage
 }
