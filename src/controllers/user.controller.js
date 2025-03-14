@@ -7,6 +7,7 @@ import logger from "../utils/logging.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 
 
+// Generate Both access and refresh token
 async function generateAccessAndRefreshToken (userId) {
   try {
     const user = await User.findById(userId);
@@ -22,6 +23,8 @@ async function generateAccessAndRefreshToken (userId) {
   }
 };
 
+
+// Register User
 const registerUser = asyncHandler(
   async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -115,6 +118,7 @@ const registerUser = asyncHandler(
 );
 
 
+// Login User
 const loginUser = asyncHandler(async (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     throw new ApiError(400, "Data is required!!");
@@ -174,7 +178,48 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
+
+// Logout User
+const logoutUser = asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: "" 
+      }
+    },
+    {
+      new: true
+    }
+  );
+
+  if (user) {
+    logger.info(`User ${req.user.username} logout successfully!!`);
+    return res
+    .status(200)
+    .clearCookie("accessToken", {
+      httpOnly: true,
+      secure: true
+    })
+    .clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true
+    })
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        `User ${req.user.username} logout successfully!!`
+      )
+    )
+  } else {
+    throw new ApiError(400, "Error while logout user!!");
+  }
+
+});
+
 export {
   registerUser,
-  loginUser
+  loginUser,
+  logoutUser
 }
