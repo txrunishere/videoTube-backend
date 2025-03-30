@@ -551,7 +551,6 @@ const updateUserCoverImage = asyncHandler(
   }
 );
 
-
 export {
   registerUser,
   loginUser,
@@ -561,5 +560,5 @@ export {
   changeCurrentPassword,
   refreshAccessToken,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
 }
