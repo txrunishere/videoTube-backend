@@ -9,7 +9,6 @@ import {
   refreshAccessToken,
   updateUserAvatar,
   updateUserCoverImage,
-  getUserChannelProfile
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -48,6 +47,5 @@ router.route("/update-cover-image").patch(
 )
 
 router.route("/get-user").get(verifyJWT, getCurrentUser);
-router.route("/channel/:userId").get(verifyJWT, getUserChannelProfile)
 
 export default router;
