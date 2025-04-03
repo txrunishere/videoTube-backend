@@ -72,7 +72,7 @@ const registerUser = asyncHandler(
     let coverImage;
 
     try {
-      avatar = await uploadOnCloudinary(avatarFilePath);
+      avatar = await uploadOnCloudinary(avatarFilePath, process.env.AVATAR_AND_COVERIMAGE_FOLDER);
     } catch (error) {
       logger.error("Avatar File not Uploaded", error);
       throw new ApiError(500, "Avatar file not uploaded")
@@ -80,7 +80,7 @@ const registerUser = asyncHandler(
 
     if (coverImageFilePath) {
       try {
-        coverImage = await uploadOnCloudinary(coverImageFilePath)
+        coverImage = await uploadOnCloudinary(coverImageFilePath, process.env.AVATAR_AND_COVERIMAGE_FOLDER)
       } catch (error) {
         logger.error("CoverImage not uploaded", error)
         throw new ApiError(500, "Cover Image not uploaded")
@@ -449,7 +449,7 @@ const updateUserAvatar = asyncHandler(
 
     let avatar;
     try {
-      avatar = await uploadOnCloudinary(avatarFilePath)
+      avatar = await uploadOnCloudinary(avatarFilePath, process.env.AVATAR_AND_COVERIMAGE_FOLDER)
     } catch (error) {
       logger.error("Avatar File not Uploaded", error);
       throw new ApiError(500, "Avatar file not uploaded")
@@ -511,7 +511,7 @@ const updateUserCoverImage = asyncHandler(
 
     let coverImage;
     try {
-      coverImage = await uploadOnCloudinary(coverImageFilePath)
+      coverImage = await uploadOnCloudinary(coverImageFilePath, process.env.AVATAR_AND_COVERIMAGE_FOLDER)
     } catch (error) {
       logger.error("coverImage File not Uploaded", error);
       throw new ApiError(500, "coverImage file not uploaded")
