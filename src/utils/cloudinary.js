@@ -12,12 +12,13 @@ cloudinary.config(
   }
 )
 
-async function uploadOnCloudinary(localFile) {
+async function uploadOnCloudinary(localFile, folder=process.env.DEFAULT_CLOUDINARY_FOLDER) {
   try {
     const responseFileOnCloudinary = await cloudinary.uploader.upload(
       localFile,
       {
-        resource_type: "auto"
+        resource_type: "auto",
+        folder: folder
       }
     );
 
