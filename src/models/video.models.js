@@ -4,15 +4,15 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const videoSchema = new Schema(
   {
     videoFile: {
-      type: String,
+      type: String, // Cloudinary URL
       required: [true, "Video File is required!!"],
     },
     thumbnail: {
-      type: String,
+      type: String, // Cloudinary URL
       required: [true, "Video Thumbnail is required!!"],
     },
     owner: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId, // Owner of video. Get owner from auth
       ref: "User"
     },
     title: {
@@ -28,11 +28,11 @@ const videoSchema = new Schema(
       maxLength: [700, "Only 700 words are required!!"]
     },
     duration: {
-      type: Number,
+      type: Number, // maybe response from cloudinay object
       required: true
     },
     views: {
-      type: Number,
+      type: Number, // TODO:
       default: 0
     },
     isPublished: {
